@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import ProjectHealth from '@/components/widgets/dashboard/ProjectHealth';
 import RiskScore from '@/components/widgets/dashboard/RiskScore';
@@ -31,47 +31,7 @@ export default function DashboardPage() {
   const [recentInsights, setRecentInsights] = useState<Insight[]>([]);
   const [followups, setFollowups] = useState<FollowupWithContext[]>([]);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  async function loadDashboardData() {
-    try {
-      const supabase = createClient();
-
-      const { data: projects } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('status', 'active')
-        .limit(1);
-
-      if (!projects || projects.length === 0) {
-        const { data: newProject } = await supabase
-          .from('projects')
-          .insert({
-            name: 'Demo Project',
-            description: 'Your first AI-powered project',
-            status: 'active',
-          })
-          .select()
-          .single();
-
-        if (newProject) {
-          setProject(newProject);
-          await loadProjectData(newProject.id);
-        }
-      } else {
-        setProject(projects[0]);
-        await loadProjectData(projects[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadProjectData(projectId: string) {
+  const loadProjectData = useCallback(async (projectId: string) => {
     const supabase = createClient();
 
     const { data: metricsData } = await supabase
@@ -125,34 +85,74 @@ export default function DashboardPage() {
     if (followupsData) {
       setFollowups(followupsData as any);
     }
-  }
+  }, []);
 
-  async function handleFollowupStatusChange(
-    followupId: string,
-    newStatus: string,
-  ) {
+  const loadDashboardData = useCallback(async () => {
     try {
       const supabase = createClient();
 
-      const updateData: any = { status: newStatus };
-      if (newStatus === 'completed') {
-        updateData.completed_at = new Date().toISOString();
-      }
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('status', 'active')
+        .limit(1);
 
-      const { error } = await supabase
-        .from('followups')
-        .update(updateData)
-        .eq('id', followupId);
+      if (!projects || projects.length === 0) {
+        const { data: newProject } = await supabase
+          .from('projects')
+          .insert({
+            name: 'Demo Project',
+            description: 'Your first AI-powered project',
+            status: 'active',
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
-
-      if (project) {
-        await loadProjectData(project.id);
+        if (newProject) {
+          setProject(newProject);
+          await loadProjectData(newProject.id);
+        }
+      } else {
+        setProject(projects[0]);
+        await loadProjectData(projects[0].id);
       }
     } catch (error) {
-      console.error('Error updating follow-up:', error);
+      console.error('Error loading dashboard:', error);
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [loadProjectData]);
+
+  useEffect(() => {
+    void loadDashboardData();
+  }, [loadDashboardData]);
+
+  const handleFollowupStatusChange = useCallback(
+    async (followupId: string, newStatus: string) => {
+      try {
+        const supabase = createClient();
+
+        const updateData: any = { status: newStatus };
+        if (newStatus === 'completed') {
+          updateData.completed_at = new Date().toISOString();
+        }
+
+        const { error } = await supabase
+          .from('followups')
+          .update(updateData)
+          .eq('id', followupId);
+
+        if (error) throw error;
+
+        if (project) {
+          await loadProjectData(project.id);
+        }
+      } catch (error) {
+        console.error('Error updating follow-up:', error);
+      }
+    },
+    [project, loadProjectData],
+  );
 
   if (loading) {
     return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import IntegrationCard, { IntegrationStatus } from '@/components/widgets/settings/IntegrationCard';
 
@@ -18,11 +18,7 @@ export default function IntegrationsSettingsPage() {
     loom: 'not_connected',
   });
 
-  useEffect(() => {
-    loadIntegrations();
-  }, []);
-
-  async function loadIntegrations() {
+  const loadIntegrations = useCallback(async () => {
     const supabase = createClient();
     const {
       data: { user },
@@ -36,12 +32,18 @@ export default function IntegrationsSettingsPage() {
 
     if (!data) return;
 
-    const next = { ...connected };
-    (data as IntegrationRow[]).forEach((row) => {
-      next[row.provider] = 'connected';
+    setConnected((prev) => {
+      const next = { ...prev };
+      (data as IntegrationRow[]).forEach((row) => {
+        next[row.provider] = 'connected';
+      });
+      return next;
     });
-    setConnected(next);
-  }
+  }, []);
+
+  useEffect(() => {
+    void loadIntegrations();
+  }, [loadIntegrations]);
 
   function openConnect(provider: Provider) {
     window.location.href = `/api/integrations/${provider}/connect`;

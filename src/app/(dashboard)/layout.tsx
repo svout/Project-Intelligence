@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -13,11 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  async function checkUser() {
+  const checkUser = useCallback(async () => {
     const supabase = createClient();
     const {
       data: { user },
@@ -28,7 +24,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!user) {
       router.push('/login');
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    void checkUser();
+  }, [checkUser]);
 
   async function handleSignOut() {
     const supabase = createClient();

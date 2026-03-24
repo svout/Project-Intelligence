@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Task, Project } from '@/types';
 import { Card } from '@/components/elements/Card';
@@ -35,11 +35,7 @@ export default function TasksPage() {
     priority: 'medium' as Task['priority'],
   });
 
-  useEffect(() => {
-    loadTasks();
-  }, [filter]);
-
-  async function loadTasks() {
+  const loadTasks = useCallback(async () => {
     try {
       const supabase = createClient();
 
@@ -72,7 +68,11 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filter]);
+
+  useEffect(() => {
+    void loadTasks();
+  }, [loadTasks]);
 
   async function createTask() {
     if (!project || !newTask.title.trim()) return;

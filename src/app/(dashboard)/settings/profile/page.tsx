@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Button from '@/components/elements/Button';
 import { Input } from '@/components/elements/Input';
@@ -24,11 +25,7 @@ export default function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  async function loadProfile() {
+  const loadProfile = useCallback(async () => {
     const supabase = createClient();
     const {
       data: { user },
@@ -41,14 +38,18 @@ export default function ProfileSettingsPage() {
       .eq('id', user.id)
       .single();
 
-    setForm({
+    setForm((prev) => ({
       full_name: profile?.full_name || '',
       email: user.email || '',
       role: profile?.role || '',
-      timezone: profile?.timezone || form.timezone,
+      timezone: profile?.timezone || prev.timezone,
       avatar_url: profile?.avatar_url || '',
-    });
-  }
+    }));
+  }, []);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -89,9 +90,11 @@ export default function ProfileSettingsPage() {
       >
         <div className="flex items-center gap-4">
           {form.avatar_url ? (
-            <img
+            <Image
               src={form.avatar_url}
               alt={form.full_name || 'Avatar'}
+              width={64}
+              height={64}
               className="w-16 h-16 rounded-full object-cover border border-white/10"
             />
           ) : (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { AIActionsSummary } from '@/types/followup';
 import { DashboardCard } from '@/components/elements/Card';
@@ -14,11 +14,7 @@ export default function AIActions({ projectId }: AIActionsProps) {
   const [actions, setActions] = useState<AIActionsSummary['today'] | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadAIActions();
-  }, [projectId]);
-
-  async function loadAIActions() {
+  const loadAIActions = useCallback(async () => {
     try {
       const supabase = createClient();
 
@@ -48,7 +44,11 @@ export default function AIActions({ projectId }: AIActionsProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [projectId]);
+
+  useEffect(() => {
+    void loadAIActions();
+  }, [loadAIActions]);
 
   if (loading) {
     return (
